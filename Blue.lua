@@ -1,4 +1,4 @@
---//  Flashlight Hub – Manual Base Touch + Helpers
+--//  Flashlight Hub – Manual Base Touch + Helpers (Mobile-Friendly)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUI.lua"))()
 
 local win = Library:Window({
@@ -6,7 +6,7 @@ local win = Library:Window({
     Desc  = "Manual touch + Fly / Speed / Wall-Noclip",
     Icon  = 105059922903197,
     Theme = "Dark",
-    Config = { Keybind = Enum.KeyCode.RightControl, Size = UDim2.new(0, 320, 0, 300) }
+    Config = { Keybind = Enum.KeyCode.RightControl, Size = UDim2.new(0, 320, 0, 350) }
 })
 
 local tab = win:Tab({Title = "Main", Icon = "hand-pointer"})
@@ -44,7 +44,6 @@ tab:Toggle({
 --  Fly
 -----------------------------------------------------------------
 local flyEnabled = false
-local flySpeed   = 50
 local flyLoop
 
 tab:Toggle({
@@ -68,7 +67,7 @@ tab:Toggle({
                 local move = Vector3.new(
                     cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z
                 ).Unit * (cam.CFrame.LookVector * vel).Magnitude
-                root.Velocity = (move + vel) * flySpeed
+                root.Velocity = (move + vel) * 50
             end)
         else
             if flyLoop then flyLoop:Disconnect(); flyLoop = nil end
@@ -117,8 +116,7 @@ tab:Toggle({
                 if not char then return end
                 for _,part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") and part.CanCollide then
-                        -- skip HumanoidRootPart so you still land on ground
-                        if part.Name ~= "HumanoidRootPart" then
+                        if part.Name ~= "HumanoidRootPart" then  -- keep floor collision
                             part.CanCollide = false
                         end
                     end
@@ -126,13 +124,10 @@ tab:Toggle({
             end)
         else
             if noclipLoop then noclipLoop:Disconnect(); noclipLoop = nil end
-            -- restore collisions
             local char = game.Players.LocalPlayer.Character
             if char then
                 for _,part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
+                    if part:IsA("BasePart") then part.CanCollide = true end
                 end
             end
         end
@@ -140,4 +135,13 @@ tab:Toggle({
 })
 
 -----------------------------------------------------------------
-win:Notify({Title = "Loaded", Desc = "Ready to use", Time = 3})
+--  Fix “black window” on mobile
+-----------------------------------------------------------------
+task.wait(0.2) -- let UI finish drawing
+local scroller = tab["Main"]["ScrollingFrame"]
+if scroller then
+    scroller.CanvasSize = UDim2.new(0,0,0, scroller.UIListLayout.AbsoluteContentSize.Y + 10)
+end
+
+-----------------------------------------------------------------
+win:Notify({Title = "Loaded", Desc = "Ready to use on mobile or PC", Time = 3})
