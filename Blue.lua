@@ -1,10 +1,9 @@
 --// Gui-Tween & Instant-Tp Remote launcher
---// Paste once, get two buttons: Auto Farm  |  Instant TP Farm
+--// Fixed version: GUI shows properly
 --------------------------------------------------------------------
 local ts   = game:GetService("TweenService")
 local rs   = game:GetService("ReplicatedStorage")
 local lp   = game:GetService("Players").LocalPlayer
-local pgui = lp:WaitForChild("PlayerGui")
 
 -- locate grass part
 local GRASS_PART = workspace:WaitForChild("GrassFolder"):WaitForChild("Level3_16_Grass")
@@ -18,7 +17,8 @@ local DRIVE_REMOTE = rs:WaitForChild("RemoteEvents"):WaitForChild("Main"):WaitFo
 local gui = Instance.new("ScreenGui")
 gui.Name  = "FarmGui"
 gui.ResetOnSpawn = false
-gui.Parent = pgui
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = game:GetService("CoreGui") -- ✅ always shows
 
 local tweenBtn = Instance.new("TextButton")
 tweenBtn.Size            = UDim2.new(0,130,0,40)
@@ -53,7 +53,6 @@ local function startTweenFarm()
 
     task.spawn(function()
         while runTween do
-            -- fire 'Ready'
             DRIVE_REMOTE:FireServer("Ready")
 
             -- tween button to grass
@@ -66,7 +65,6 @@ local function startTweenFarm()
             tween:Play()
             tween.Completed:Wait()
 
-            -- fire 'return'
             DRIVE_REMOTE:FireServer("return")
 
             -- reset button position
