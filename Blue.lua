@@ -1,21 +1,8 @@
 repeat task.wait() until game:IsLoaded()
 
-local ts = game:GetService("TweenService")
-local rs = game:GetService("ReplicatedStorage")
-local players = game:GetService("Players")
-local lp = players.LocalPlayer
-
--- locate grass part
-local GRASS_PART = workspace:WaitForChild("GrassFolder"):WaitForChild("Level3_16_Grass")
-
--- locate remotes
-local DRIVE_REMOTE = rs:WaitForChild("RemoteEvents"):WaitForChild("Main"):WaitForChild("Drive")
-
---------------------------------------------------------------------
--- GUI
---------------------------------------------------------------------
-local gui = Instance.new("ScreenGui")
-gui.Name = "FarmGui"
-gui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = game:GetService("CoreGui") -- ✅ executor-safe
+local gui = Instance.new("ScreenGui", game.CoreGui)
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0,200,0,50)
+btn.Position = UDim2.new(0.5,-100,0.5,-25)
+btn.Text = "Executor GUI Test"
+btn.Parent = gui
