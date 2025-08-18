@@ -1,94 +1,143 @@
---// Wait for the game to load
-repeat task.wait() until game:IsLoaded()
+--//  Flashlight Hub – Manual Base Touch + Helpers
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUI.lua"))()
 
---------------------------------------------------------------------
--- Services
---------------------------------------------------------------------
-local rs      = game:GetService("ReplicatedStorage")
-local players = game:GetService("Players")
-local run     = game:GetService("RunService")
-local guiServ = game:GetService("CoreGui")
+local win = Library:Window({
+    Title = "Base Touch & Helpers",
+    Desc  = "Manual touch + Fly / Speed / Wall-Noclip",
+    Icon  = 105059922903197,
+    Theme = "Dark",
+    Config = { Keybind = Enum.KeyCode.RightControl, Size = UDim2.new(0, 320, 0, 300) }
+})
 
---------------------------------------------------------------------
--- Remotes
---------------------------------------------------------------------
-local DRIVE_REMOTE = rs:WaitForChild("RemoteEvents"):WaitForChild("Main"):WaitForChild("Drive")
+local tab = win:Tab({Title = "Main", Icon = "hand-pointer"})
+tab:Section({Title = "Base Touch"})
+tab:Section({Title = "Helpers"})
 
---------------------------------------------------------------------
--- GUI
---------------------------------------------------------------------
-local gui = Instance.new("ScreenGui")
-gui.Name = "FarmGui"
-gui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = guiServ
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 80)
-frame.Position = UDim2.new(0.4, 0, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.Active = true
-frame.Draggable = true
-frame.Parent = gui
-
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(1, -20, 0, 50)
-button.Position = UDim2.new(0, 10, 0, 15)
-button.BackgroundColor3 = Color3.fromRGB(60,60,60)
-button.TextColor3 = Color3.fromRGB(255,255,255)
-button.Font = Enum.Font.SourceSansBold
-button.TextSize = 20
-button.Text = "Auto Drive: OFF"
-button.Parent = frame
-
---------------------------------------------------------------------
--- Logic
---------------------------------------------------------------------
-local running = false
-local heartbeat = nil
-
--- Helper: send the correct key state to the server
-local function sendKeyState(isDown)
-    -- Try different variations of the remote event
-    local success, err = pcall(function()
-        DRIVE_REMOTE:FireServer(isDown and "W" or "WUp")
-    end)
-    
-    if not success then
-        success, err = pcall(function()
-            DRIVE_REMOTE:FireServer(isDown and "WDown" or "WUp")
-        end)
-    end
-    
-    if not success then
-        success, err = pcall(function()
-            DRIVE_REMOTE:FireServer(isDown)
-        end)
-    end
-    
-    if not success then
-        warn("Failed to send key state:", err)
+-----------------------------------------------------------------
+--  Manual Base Touch
+-----------------------------------------------------------------
+local function fireTouch(part)
+    local touch = part:FindFirstChild("TouchInterest")
+    if touch then
+        local root = game.Players.LocalPlayer.Character and
+                     game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if root then touch:FireServer(root) end
     end
 end
 
-button.MouseButton1Click:Connect(function()
-    running = not running
-    button.Text = running and "Auto Drive: ON" or "Auto Drive: OFF"
-
-    if running then
-        -- Start by sending a key down event
-        sendKeyState(true)
-        
-        -- Start the loop to keep the key pressed
-        heartbeat = run.Heartbeat:Connect(function()
-            sendKeyState(true)
-        end)
-    else
-        -- Stop the loop and release the key
-        if heartbeat then
-            heartbeat:Disconnect()
-            heartbeat = nil
+tab:Toggle({
+    Title = "Touch All Bases",
+    Desc  = "Fire TouchInterest on Base1→Base10 once",
+    Value = false,
+    Callback = function(on)
+        if not on then return end
+        for i = 1, 10 do
+            local base = workspace.Bases:FindFirstChild("Base"..i)
+            if base and base:FindFirstChild("TouchingPart") then
+                fireTouch(base.TouchingPart)
+            end
         end
-        sendKeyState(false)
     end
-end)
+})
+
+-----------------------------------------------------------------
+--  Fly
+-----------------------------------------------------------------
+local flyEnabled = false
+local flySpeed   = 50
+local flyLoop
+
+tab:Toggle({
+    Title = "Fly",
+    Desc  = "Space ↑  Shift ↓",
+    Value = false,
+    Callback = function(v)
+        flyEnabled = v
+        if v then
+            local hum = game.Players.LocalPlayer.Character and
+                        game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if not hum then return end
+            hum.PlatformStand = true
+            flyLoop = game:GetService("RunService").Heartbeat:Connect(function(dt)
+                local root = hum.Parent and hum.Parent:FindFirstChild("HumanoidRootPart")
+                if not root or not flyEnabled then return end
+                local vel = Vector3.zero
+                local cam = workspace.CurrentCamera
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space)  then vel = vel + Vector3.new(0,1,0) end
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel + Vector3.new(0,-1,0) end
+                local move = Vector3.new(
+                    cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z
+                ).Unit * (cam.CFrame.LookVector * vel).Magnitude
+                root.Velocity = (move + vel) * flySpeed
+            end)
+        else
+            if flyLoop then flyLoop:Disconnect(); flyLoop = nil end
+            local hum = game.Players.LocalPlayer.Character and
+                        game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = false end
+        end
+    end
+})
+
+-----------------------------------------------------------------
+--  Speed Boost
+-----------------------------------------------------------------
+local speedConn
+tab:Slider({
+    Title = "Speed Boost",
+    Desc  = "WalkSpeed 16 → 100",
+    Min   = 16,
+    Max   = 100,
+    Value = 16,
+    Callback = function(v)
+        if speedConn then speedConn:Disconnect() end
+        speedConn = game:GetService("RunService").Heartbeat:Connect(function()
+            local hum = game.Players.LocalPlayer.Character and
+                        game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.WalkSpeed = v end
+        end)
+    end
+})
+
+-----------------------------------------------------------------
+--  Wall-Only Noclip
+-----------------------------------------------------------------
+local noclipEnabled = false
+local noclipLoop
+
+tab:Toggle({
+    Title = "Wall Noclip",
+    Desc  = "Walk through parts but keep floor collision",
+    Value = false,
+    Callback = function(v)
+        noclipEnabled = v
+        if v then
+            noclipLoop = game:GetService("RunService").Stepped:Connect(function()
+                local char = game.Players.LocalPlayer.Character
+                if not char then return end
+                for _,part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        -- skip HumanoidRootPart so you still land on ground
+                        if part.Name ~= "HumanoidRootPart" then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if noclipLoop then noclipLoop:Disconnect(); noclipLoop = nil end
+            -- restore collisions
+            local char = game.Players.LocalPlayer.Character
+            if char then
+                for _,part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end
+})
+
+-----------------------------------------------------------------
+win:Notify({Title = "Loaded", Desc = "Ready to use", Time = 3})
